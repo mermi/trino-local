@@ -1,0 +1,63 @@
+version: "3.8"
+
+x-common:
+  environment:
+    &common-env
+    INTERNAL_COMMUNICATION_SECRET: "5pDowS8LdRMwWyxSo9YnW8VD8ttshrVHaKy6sIFIrCo="
+
+volumes:
+  coordinator_data:
+    driver: local
+  
+  worker_data:
+    driver: local
+
+
+services:
+  coordinator:
+    image: trinodb/trino:${VERSION}
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    container_name: "coordinator"
+    volumes:
+      - ./coordinator-configs:/etc/trino
+      - ./catalogs:/etc/trino/catalog
+      - coordinator_data:/data/trino
+  
+    environment:
+      <<: *common-env
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_SECURITY_TOKEN: ${AWS_SECURITY_TOKEN}
+      <<: *common-env
+  
+    networks:
+      - services
+    restart: always
+
+  worker0:
+    image: trinodb/trino:${VERSION}
+    container_name: "worker0"
+    ports:
+      - "8081:8081"
+    depends_on:
+      - coordinator
+    volumes:
+      - ./worker-configs:/etc/trino
+      - ./catalogs:/etc/trino/catalog
+      - worker_data:/data/trino
+
+    networks:
+      - services
+    environment:
+      <<: *common-env
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_SECURITY_TOKEN: ${AWS_SECURITY_TOKEN}
+
+networks: 
+  services:
+    name: trino_local_network
